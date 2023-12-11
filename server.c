@@ -149,8 +149,10 @@ int main ()
     		if (strcmp(msg,"exit")==0 || strcmp(msg,"iesire")==0)
     		   {
     		   activ=0;
-    		   break;
+    		   bzero(msgrasp,1024);
+    		   strcat(msgrasp,"out");
     		   }
+    		   else
     		switch (logat)
     		{
     		case 0:
@@ -178,19 +180,15 @@ int main ()
 		{
 		file=fopen(filename,"w");
 		if (file==NULL)
-		{
-		perror("Eroare creare utilizatori.txt");
-		}
+		{ perror("Eroare creare utilizatori.txt"); }
 		}
 		else
 		{
 		while(fgets(buf,sizeof(buf),file))
-		{
-    		if(strstr(buf,msg)!=NULL)
-    		{
-    		gasit=1;
-    		break;
-    		}
+		{ char nume_utilizator[20];
+		if (sscanf(buf, "%s", nume_utilizator) == 1) {
+                 if (strcmp(nume_utilizator, msg) == 0) 
+    		{ gasit=1; break; }
 		}
 		}
 		if(gasit==1)
@@ -206,6 +204,7 @@ int main ()
 
 		fclose(file);
     		}
+    		}
     		else
     		if(stadiu==2)
     		{
@@ -218,19 +217,17 @@ int main ()
 		{
 		file=fopen(filename,"w");
 		if (file==NULL)
-		{
-		perror("Eroare creare utilizatori.txt");
-		}
+		{ perror("Eroare creare utilizatori.txt");	}
 		}
 		else
 		{
 		while(fgets(buf,sizeof(buf),file))
 		{
-    		if(strstr(buf,msg)!=NULL)
-    		{
-    		gasit=1;
-    		break;
-    		}
+		
+    		char nume_utilizator[20];
+		if (sscanf(buf, "%s", nume_utilizator) == 1) {
+                 if (strcmp(nume_utilizator, msg) == 0) 
+    		{ gasit=1; break; }
 		}
 		}
 		if(gasit==0)
@@ -246,6 +243,7 @@ int main ()
 		strcat(msgrasp,"Nume de utilizator folosit! Incearca altul: ");
 		}
 		fclose(file);
+    		}
     		}
     		else
     		if(stadiu==3)
@@ -339,15 +337,25 @@ int main ()
             	}
             	char *pozitie = strstr(mesaje, de_eliminat);
             	if (pozitie != NULL) {
-        // Calculează offset-ul (poziția) în șir
         	size_t offset = pozitie - mesaje;
-
-        // Calculează lungimea substring-ului
         	size_t lungime_substring = strlen(de_eliminat);
-
-        // Utilizează memmove pentru a șterge substring-ul
         	memmove(pozitie, pozitie + lungime_substring, strlen(pozitie + lungime_substring) + 1);
-    		}
+    		}	
+    		if (strstr(line,"<")!=NULL && strstr(line,">")!=NULL)
+		{
+		const char *start = strchr(line, '<'); // Găsește prima apariție a caracterului '<'
+    const char *end = strchr(line, '>');   // Găsește prima apariție a caracterului '>'
+
+    if (start == NULL || end == NULL || start >= end) {
+        return -1; 
+    }
+    int numar;
+    if (sscanf(start + 1, "%d", &numar) != 1) {
+        // Eroare la conversia numărului
+        return -1; // Sau altă valoare care indică o eroare
+    }
+                 }
+    		
           	}
           	}
     		}
@@ -528,11 +536,8 @@ int main ()
                char *p = &msg[1];  
                char *sfarsit;
                numar = strtol(p, &sfarsit, 10);
-               printf("%d",numar);
-
-       
-              if (p != sfarsit && *sfarsit == '>') {
-            
+               printf("%d",numar);       
+              if (p != sfarsit && *sfarsit == '>') {            
               printf("Număr găsit: %d\n", numar);
               reply=numar;
                }
@@ -569,19 +574,14 @@ int main ()
 		{
 		file=fopen(filename,"w");
 		if (file==NULL)
-		{
-		perror("Eroare creare utilizatori.txt");
-		}
+		{ perror("Eroare creare utilizatori.txt");	}
 		}
 		else
 		{
 		while(fgets(buf,sizeof(buf),file))
 		{
     		if(strstr(buf,msg)!=NULL)
-    		{
-    		gasit=1;
-    		break;
-    		}
+    		{ gasit=1;	break;	}
 		}
 		}
 		if(gasit==1)
@@ -606,26 +606,15 @@ int main ()
             	char *pozitie = strstr(buf, de_eliminat);
             	printf("\n%s %s",buf,pozitie);
             	if (pozitie != NULL) {
-        // Calculează offset-ul (poziția) în șir
         	size_t offset = pozitie - buf;
-
-        // Calculează lungimea substring-ului
         	size_t lungime_substring = strlen(de_eliminat);
-
-        // Utilizează memmove pentru a șterge substring-ul
         	memmove(pozitie, pozitie + lungime_substring, strlen(pozitie + lungime_substring) + 1);
-    		}
-    		
+    		}   		
     		char *pozitie2 = strstr(buf, de_eliminat2);
     		printf("\n%s %s",buf,pozitie2);
             	if (pozitie2 != NULL) {
-        // Calculează offset-ul (poziția) în șir
         	size_t offset = pozitie2 - buf;
-
-        // Calculează lungimea substring-ului
         	size_t lungime_substring = strlen(de_eliminat2);
-
-        // Utilizează memmove pentru a șterge substring-ul
         	memmove(pozitie2, pozitie2 + lungime_substring, strlen(pozitie2 + lungime_substring) + 1);
     		}
     		strcat(msgrasp,buf+4);
@@ -676,10 +665,7 @@ int main ()
                char *sfarsit;
                numar = strtol(p, &sfarsit, 10);
                printf("%d",numar);
-
-       
-              if (p != sfarsit && *sfarsit == '>') {
-            
+              if (p != sfarsit && *sfarsit == '>') {      
               printf("Număr găsit: %d\n", numar);
               reply=numar;
                }
@@ -714,13 +700,8 @@ int main ()
 		strcat(istoric,"\n");
 		char *pozitie = strstr(istoric, de_eliminat);
             	if (pozitie != NULL) {
-        // Calculează offset-ul (poziția) în șir
         	size_t offset = pozitie - istoric;
-
-        // Calculează lungimea substring-ului
         	size_t lungime_substring = strlen(de_eliminat);
-
-        // Utilizează memmove pentru a șterge substring-ul
         	memmove(pozitie, pozitie + lungime_substring, strlen(pozitie + lungime_substring) + 1);
     		}
     		strcat(de_eliminat2," -> "); 
@@ -760,7 +741,8 @@ int main ()
         	size_t lungime_sir_extras = strlen(eu);
         size_t offset = pozitie - clienti_online;
         memmove(pozitie, pozitie + lungime_sir_extras, strlen(pozitie + lungime_sir_extras) + 1);
-    		exit(0);
+    		exit(0);	
+    	}
     	}
     }				/* while */
     munmap(clienti_online, MAX_LENGTH);

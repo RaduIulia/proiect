@@ -63,12 +63,12 @@ int main (int argc, char *argv[])
   bzero (msg, 100);
   printf ("Bun venit la Offline Messenger!\n");
   printf ("Inregistrare / Autentificare: ");
-  fflush (stdout);
-  bytes=read (0, msg, sizeof(msg));
-  msg[bytes-1]='\0';
   int iesire=1;
   while(iesire)
   {
+  fflush (stdout);
+  bytes=read (0, msg, sizeof(msg));
+  msg[bytes-1]='\0';
   /* trimiterea mesajului la server */
   if (write (sd, &msg, sizeof(msg)) <= 0)
     {
@@ -84,12 +84,7 @@ int main (int argc, char *argv[])
       return errno;
     }
   /* afisam mesajul primit */
-  printf ("\n%s", msg);
-  bzero (msg, 100);
-  fflush (stdout);
-  bytes=read (0, &msg, sizeof(msg));
-  msg[bytes-1]='\0';
-  if (strcmp(msg,"exit")==0 || strcmp(msg,"iesire")==0)
+  if (strcmp(msg,"out")==0)
   {
   /* inchidem conexiunea, am terminat */
   iesire=0;
@@ -100,5 +95,9 @@ int main (int argc, char *argv[])
     }
   close (sd);
   }
+  else
+  printf ("\n%s", msg);  
   }
+  printf("\nAi iesit din aplicatia Offline Messenger.\n");
+  return 0;
 }
