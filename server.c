@@ -15,9 +15,55 @@
 #define MAX_LENGTH 1024
 /* codul de eroare returnat de anumite apeluri */
 extern int errno;
-//strstr strcmp iuli-iulia
-//sa nu iti poti trimite mesaj singur/singura?
-//conversatie cu reply la mesaj si istoric
+
+char* extrage_mesaj(int n) {
+    char nume_fisier[] = "mail.txt";
+    FILE *file = fopen(nume_fisier, "r");
+    if (file == NULL) {
+        perror("Eroare la deschiderea fișierului");
+        return NULL;    }
+    char linie[256];  
+    int linie_curenta = 0;
+    while (fgets(linie, sizeof(linie), file) != NULL) {
+        linie_curenta++;
+        if (linie_curenta == n) {
+            fclose(file);
+            char *pozitie_doua_puncte = strstr(linie, ": ");
+            if (pozitie_doua_puncte != NULL) {
+                size_t lungime_linie = strlen(linie);
+                if (lungime_linie > 0 && linie[lungime_linie - 1] == '\n') {
+                    linie[lungime_linie - 2] = '\0';
+                }
+                char *text_dupa_doua_puncte = strdup(pozitie_doua_puncte + 2);
+                return text_dupa_doua_puncte; }
+    }
+  }
+}
+
+void adauga_text(char *sir_initial, const char *text_adaugat) {
+    char *inceput = strchr(sir_initial, '<');
+    if (inceput != NULL) {
+        char *sfarsit = strchr(inceput, '>');
+        if (sfarsit != NULL) {
+            sfarsit++;
+            size_t dimensiune_sir_initial = inceput - sir_initial;
+            size_t dimensiune_text_final = dimensiune_sir_initial + strlen(text_adaugat) + strlen(sfarsit) + 1;
+            char *text_final = (char *)malloc(dimensiune_text_final);
+            if (text_final == NULL) {
+                perror("Eroare la alocarea de memorie");
+                return;
+            }
+            strncpy(text_final, sir_initial, dimensiune_sir_initial);
+            text_final[dimensiune_sir_initial] = '\0';
+            strncat(text_final, "\"", dimensiune_text_final);
+            strncat(text_final, text_adaugat, dimensiune_text_final);
+            strncat(text_final, "\"-->", dimensiune_text_final);
+            strncat(text_final, sfarsit, dimensiune_text_final);
+            strcpy(sir_initial, text_final);
+            free(text_final);}
+    }
+}
+
 int main ()
 {
     struct sockaddr_in server;	// structura folosita de server
@@ -30,6 +76,8 @@ int main ()
     char de_trimis_catre[1024];
     int ok_catre=0;
     int de_deschis=0;
+    int comanda;
+    int refresh=0;
     char istoric[1024];
     char de_eliminat[1024];
     bzero(de_eliminat,1024);
@@ -56,24 +104,20 @@ int main ()
     else
     while ((caracter = fgetc(fisier)) != EOF) {
         if (caracter == '\n') {
-            numar_linii++;
-        }
+            numar_linii++;}
     }
     fclose(fisier);
     int *numar_mesaje = mmap(NULL, MAX_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if (numar_mesaje == MAP_FAILED) {
         perror("Eroare la alocarea memoriei partajate");
         exit(EXIT_FAILURE);
-    }
-    else
+    } else
     *numar_mesaje=numar_linii;
     printf("numar mesaje=%d\n",*numar_mesaje);
     /* crearea unui socket */
     if ((sd = socket (AF_INET, SOCK_STREAM, 0)) == -1)
-    {
-    	perror ("[server]Eroare la socket().\n");
-    	return errno;
-    }
+    {	perror ("[server]Eroare la socket().\n");
+    	return errno;   }
     /* pregatirea structurilor de date */
     bzero (&server, sizeof (server));
     bzero (&from, sizeof (from));
@@ -86,20 +130,15 @@ int main ()
     server.sin_port = htons (PORT);
     /* atasam socketul */
     if (bind (sd, (struct sockaddr *) &server, sizeof (struct sockaddr)) == -1)
-    {
-    	perror ("[server]Eroare la bind().\n");
-    	return errno;
-    }
+    {	perror ("[server]Eroare la bind().\n");
+    	return errno;   }
     /* punem serverul sa asculte daca vin clienti sa se conecteze */
     if (listen (sd, 1) == -1)
-    {
-    	perror ("[server]Eroare la listen().\n");
-    	return errno;
-    }
+    {  	perror ("[server]Eroare la listen().\n");
+    	return errno;  }
     /* servim in mod concurent clientii... */
     while (1)
-    {
-    	int client;
+    {	int client;
     	int length = sizeof (from);
     	printf ("[server]Asteptam la portul %d...\n",PORT);
     	fflush (stdout);
@@ -107,10 +146,8 @@ int main ()
     	client = accept (sd, (struct sockaddr *) &from, &length);
     	/* eroare la acceptarea conexiunii de la un client */
     	if (client < 0)
-    	{
-    		perror ("[server]Eroare la accept().\n");
-    		continue;
-    	}
+    	{	perror ("[server]Eroare la accept().\n");
+    		continue; 	}
     	int pid;
     	if ((pid = fork()) == -1) {
     		close(client);
@@ -147,12 +184,10 @@ int main ()
                  }
     		printf ("[server]Mesajul a fost receptionat...%s\n", msg);
     		if (strcmp(msg,"exit")==0 || strcmp(msg,"iesire")==0)
-    		   {
-    		   activ=0;
+    		   {   activ=0;
     		   bzero(msgrasp,1024);
     		   strcat(msgrasp,"out");
-    		   }
-    		   else
+    		   }   else
     		switch (logat)
     		{
     		case 0:
@@ -170,8 +205,7 @@ int main ()
     		}
     		else
     		if(stadiu==1)
-    		{
-    		bzero(msgrasp,1024);
+    		{	bzero(msgrasp,1024);
     		const char *filename="utilizatori.txt";
 		FILE *file=fopen(filename, "r");
 		char buf[2048];
@@ -181,8 +215,7 @@ int main ()
 		file=fopen(filename,"w");
 		if (file==NULL)
 		{ perror("Eroare creare utilizatori.txt"); }
-		}
-		else
+		}	else
 		{
 		while(fgets(buf,sizeof(buf),file))
 		{ char nume_utilizator[20];
@@ -198,14 +231,10 @@ int main ()
 		stadiu=3;
 		}
 		else
-		{
-		strcat(msgrasp,"Nume de utilizator inexistent! Reincearca: ");
-		}
-
+		{	strcat(msgrasp,"Nume de utilizator inexistent! Reincearca: ");}
 		fclose(file);
     		}
-    		}
-    		else
+    		}  else
     		if(stadiu==2)
     		{
     		bzero(msgrasp,1024);
@@ -222,9 +251,7 @@ int main ()
 		else
 		{
 		while(fgets(buf,sizeof(buf),file))
-		{
-		
-    		char nume_utilizator[20];
+		{	char nume_utilizator[20];
 		if (sscanf(buf, "%s", nume_utilizator) == 1) {
                  if (strcmp(nume_utilizator, msg) == 0) 
     		{ gasit=1; break; }
@@ -237,15 +264,13 @@ int main ()
 		stadiu=4;
 		file=fopen(filename,"a");
 		fprintf(file,"%s\n",msg);
-		}
-		else
+		}	else
 		{
 		strcat(msgrasp,"Nume de utilizator folosit! Incearca altul: ");
 		}
 		fclose(file);
     		}
-    		}
-    		else
+    		}	else
     		if(stadiu==3)
     		{
     		int ok=0;
@@ -258,7 +283,6 @@ int main ()
     		while (fgets(line, sizeof(line), file)) {
     		printf("%s %s %s* \n",line,anterior,msg);
         	char *found_position = strstr(line, anterior);
-
         	if (found_position != NULL) {
         	printf("gasit : %s*\n",found_position);
             	char *next_word = found_position + strlen(anterior);
@@ -267,11 +291,9 @@ int main ()
             	}
             	printf("gasit 2 : %s*\n",next_word);
             	next_word[strcspn(next_word, "\n")] = '\0';
-
             	if (strcmp(next_word, msg)==0) {
             	logat=1;
-                break;
-            	}
+                break; 	}
         	}
     		}
     		if(logat==1)
@@ -280,7 +302,7 @@ int main ()
             	strcat(clienti_online, anterior);
             	strcat(clienti_online,"\n");
                 printf("Found '%s' after '%s' in the file.\n", msg, anterior);
-                strcat(msgrasp,"\nAi intrat in cont! \n-ajutor/help\n-vezi utilizatori activi/see online users\n-vezi toti utilizatorii/see all users\n-trimite mesaj/send message\n-intra in conversatie/open conversation \n-iesire/exit");
+                strcat(msgrasp,"\nAi intrat in cont! \n-ajutor/help\n-vezi utilizatori activi/see online users\n-vezi toti utilizatorii/see all users\n-trimite mesaj/send message\n-intra in conversatie/open conversation \n-reimprospateaza/refresh \n-iesire/exit");
                 strcat(de_eliminat," -> ");
             	strcat(de_eliminat,eu);       	
 		int total;
@@ -301,19 +323,15 @@ int main ()
 		{
 		file=fopen(filename,"a");
 		if (file==NULL)
-			{
-		perror("Eroare creare mail.txt");
-		}
-		}
-		else
+		{	perror("Eroare creare mail.txt");	}
+		}	else
 		{
 		char line[1000];
 		char start='0';
     		while (fgets(line, sizeof(line), file)) {
    		 if(line[0]==start)
-  		  {
-    			char *inc=" -> ";
-    			char *gasit=strstr(line,inc);
+  		  {	char *inc=" -> ";
+        		char *gasit=strstr(line,inc);
     			if (gasit != NULL) {
         		gasit += strlen(inc);
         		char urmcuv[100];
@@ -341,26 +359,25 @@ int main ()
         	size_t lungime_substring = strlen(de_eliminat);
         	memmove(pozitie, pozitie + lungime_substring, strlen(pozitie + lungime_substring) + 1);
     		}	
-    		if (strstr(line,"<")!=NULL && strstr(line,">")!=NULL)
-		{
-		const char *start = strchr(line, '<'); // Găsește prima apariție a caracterului '<'
-    const char *end = strchr(line, '>');   // Găsește prima apariție a caracterului '>'
-
-    if (start == NULL || end == NULL || start >= end) {
-        return -1; 
-    }
-    int numar;
-    if (sscanf(start + 1, "%d", &numar) != 1) {
-        // Eroare la conversia numărului
-        return -1; // Sau altă valoare care indică o eroare
-    }
-                 }
-    		
+    		if (strstr(mesaje,"<")!=NULL && strstr(mesaje,">")!=NULL)
+		{ const char *inceput = strchr(mesaje, '<');  // Găsește prima apariție a caracterului '<'
+    		const char *sfarsit = strchr(mesaje, '>'); 
+    		printf("inceput este %s\nsfrasit este%s",inceput,sfarsit);
+		if (inceput != NULL && sfarsit != NULL) {
+        char numar_str[sfarsit - inceput];
+        strncpy(numar_str, inceput + 1, sfarsit - inceput - 1);
+        numar_str[sfarsit - inceput - 1] = '\0';
+        int rezultat_exemplu;
+        rezultat_exemplu=atoi(numar_str);
+        printf("pana aici e ok %d ", rezultat_exemplu);
+        printf("mesajul este=%s,",extrage_mesaj(rezultat_exemplu));
+        adauga_text(mesaje,extrage_mesaj(rezultat_exemplu));
+        printf("editat este=%s",mesaje); }
+                 }	
           	}
           	}
     		}
-    		fprintf(tempFile, "%s", line);  
-    	}
+    		fprintf(tempFile, "%s", line);  	}
 	}
 		fclose(file);
 		fclose(tempFile);
@@ -416,7 +433,7 @@ int main ()
     		strcat(clienti_online,"\n");
         	printf("Word '%s' appended with '%s' in the file.\n", anterior, msg);
         	logat=1;
-                strcat(msgrasp,"Cont creat! \n-ajutor/help\n-vezi utilizatori activi/see online users\n-vezi toti utilizatorii/see all users\n-trimite mesaj/send message\n-intra in conversatie/open conversation \n-iesire/exit \nAi primit 0 mesaje cat ai fost offline!\nComanda ta: ");
+                strcat(msgrasp,"Cont creat! \n-ajutor/help\n-vezi utilizatori activi/see online users\n-vezi toti utilizatorii/see all users\n-trimite mesaj/send message\n-intra in conversatie/open conversation \n-reimprospateaza/refresh \n-iesire/exit \nAi primit 0 mesaje cat ai fost offline!\nComanda ta: ");
     		} 
     		else 
     		{
@@ -430,19 +447,20 @@ int main ()
     		}    		
     		break;
     		default:
+    		comanda=10;
     		bzero(msgrasp,1024);
     		if (strcmp(msg,"help")==0 || strcmp(msg,"ajutor")==0||strcmp(msg,"x")==0)
     		{
     		de_deschis=0;  
-    		strcat(msgrasp,"\nMeniu comenzi:\n-ajutor/help\n-vezi utilizatori activi/see online users\n-vezi toti utilizatorii/see all users\n-trimite mesaj/send message\n-intra in conversatie/open conversation \n-iesire/exit");
-    		strcat(msgrasp, "\nComanda ta: ");
+    		strcat(msgrasp,"\nMeniu comenzi:\n-ajutor/help\n-vezi utilizatori activi/see online users\n-vezi toti utilizatorii/see all users\n-trimite mesaj/send message\n-intra in conversatie/open conversation \n-reimprospateaza/refresh \n-iesire/exit");
+    		comanda=1;
     		}
     		else
     		if (strstr(msg,"utilizatori activi")!=NULL || strstr(msg,"online users")!=NULL)
     		{
     		strcat(msgrasp, "Lista utilizatorilor activi:\n");
        		strcat(msgrasp,clienti_online);
-       		strcat(msgrasp, "\nComanda ta: ");
+       		comanda=2;
     		}
     		else
  		if (strstr(msg,"toti utilizatorii")!=NULL || strstr(msg,"all users")!=NULL)
@@ -461,7 +479,7 @@ int main ()
 		strcat(list,"\n");
 		}  
        		strcat(msgrasp,list);
-       		strcat(msgrasp, "\nComanda ta: ");
+       		comanda=3;
     		}
     		else
     		if (strstr(msg,"intra in conversatie")!=NULL || strstr(msg,"open conversation")!=NULL)
@@ -473,7 +491,15 @@ int main ()
     		if (strstr(msg,"trimite mesaj")!=NULL || strstr(msg,"send message")!=NULL)
     		{
     		ok_catre=1;
+    		bzero(de_trimis_catre,1024);
     		strcat(msgrasp,"Destinatar mesaj: ");
+    		}
+    		else
+    		if(strstr(msg,"reimprospatare")!=NULL || strstr(msg,"refresh")!=NULL)
+    		{
+    		comanda=4;
+    		strcat(msgrasp,"\nMeniu comenzi:\n-ajutor/help\n-vezi utilizatori activi/see online users\n-vezi toti utilizatorii/see all users\n-trimite mesaj/send message\n-intra in conversatie/open conversation \n-reimprospateaza/refresh \n-iesire/exit");	
+    		strcat(msgrasp,"\nS-a reimprospatat pagina.");	
     		}
     		else
     		if(ok_catre==1)
@@ -495,11 +521,9 @@ int main ()
 		while(fgets(buf,sizeof(buf),file))
 		{
     		if(strstr(buf,msg)!=NULL)
-    		{
-    		printf("%s",buf);
+    		{	printf("%s",buf);
     		gasit=1;
-    		break;
-    		}
+    		break;	}
 		}
 		}
 		if(gasit==1)
@@ -561,7 +585,7 @@ int main ()
 		}
 		fclose(file);
 		strcat(msgrasp,"Mesaj trimis.");
-		strcat(msgrasp, "\nComanda ta: ");
+		comanda=5;
     		}
     		else
     		if(de_deschis==1)
@@ -579,9 +603,11 @@ int main ()
 		else
 		{
 		while(fgets(buf,sizeof(buf),file))
-		{
-    		if(strstr(buf,msg)!=NULL)
-    		{ gasit=1;	break;	}
+		{ char nume_utilizator[20];
+		if (sscanf(buf, "%s", nume_utilizator) == 1) {
+                 if (strcmp(nume_utilizator, msg) == 0) 
+    		{ gasit=1; break; }
+		}
 		}
 		}
 		if(gasit==1)
@@ -617,15 +643,31 @@ int main ()
         	size_t lungime_substring = strlen(de_eliminat2);
         	memmove(pozitie2, pozitie2 + lungime_substring, strlen(pozitie2 + lungime_substring) + 1);
     		}
+    		if (strstr(buf,"<")!=NULL && strstr(buf,">")!=NULL)
+		{ const char *inceput = strchr(buf, '<');  // Găsește prima apariție a caracterului '<'
+    		const char *sfarsit = strchr(buf, '>'); 
+    		printf("inceput este %s\nsfrasit este%s",inceput,sfarsit);
+		if (inceput != NULL && sfarsit != NULL) {
+        char numar_str[sfarsit - inceput];
+        strncpy(numar_str, inceput + 1, sfarsit - inceput - 1);
+        numar_str[sfarsit - inceput - 1] = '\0';
+        int rezultat_exemplu;
+        rezultat_exemplu=atoi(numar_str);
+        printf("pana aici e ok %d ", rezultat_exemplu);
+        printf("mesajul este=%s,",extrage_mesaj(rezultat_exemplu));
+        adauga_text(buf,extrage_mesaj(rezultat_exemplu));
+        printf("editat este=%s",buf); }
+                 }	
     		strcat(msgrasp,buf+4);
         	}
     		}	
 		de_deschis=2;
     		fclose(fisier);
     		strcat(istoric,msgrasp);
+    		strcat(msgrasp,"\n-trimite r sa se reincarce pagina");
     		strcat(msgrasp,"\n-trimite x sa revii la meniu");
-    		strcat(msgrasp,"\n-raspunde");
-    		strcat(msgrasp,"\n\nComanda ta: ");	
+    		strcat(msgrasp,"\nComanda ta/ mesajul tau: ");	
+    		comanda=6;
 		}
 		else
 		{
@@ -634,14 +676,70 @@ int main ()
 		fclose(file);
     		}
     		else
-    		if(de_deschis==2&&strcmp(msg,"raspunde")==0)
-    		{ 		
-    		de_deschis=3;
+    		if(de_deschis>1&&strcmp(msg,"r")==0)
+    		{			
+		bzero(istoric,1024);
+		strcat(msgrasp,"Conversatia cu ");
+		strcat(msgrasp,de_trimis_catre);
+		strcat(msgrasp," :\n\n");
+		const char *filename="mail.txt";
+		FILE *file=fopen(filename, "r");
+		char buf[2048];
+		if (file==NULL)
+		{
+		file=fopen(filename,"w");
+		if (file==NULL)
+		{
+		perror("Eroare creare mail.txt");
+		}
+		}
+    		int numar_linie = 1;
+    		while(fgets(buf,sizeof(buf),fisier)) {
+        	if (strstr(buf, de_trimis_catre) && strstr(buf, eu) ) {
+        	buf[0]='2';
+            	char *pozitie = strstr(buf, de_eliminat);
+            	printf("\n%s %s",buf,pozitie);
+            	if (pozitie != NULL) {
+        	size_t offset = pozitie - buf;
+        	size_t lungime_substring = strlen(de_eliminat);
+        	memmove(pozitie, pozitie + lungime_substring, strlen(pozitie + lungime_substring) + 1);
+    		}   		
+    		char *pozitie2 = strstr(buf, de_eliminat2);
+    		printf("\n%s %s",buf,pozitie2);
+            	if (pozitie2 != NULL) {
+        	size_t offset = pozitie2 - buf;
+        	size_t lungime_substring = strlen(de_eliminat2);
+        	memmove(pozitie2, pozitie2 + lungime_substring, strlen(pozitie2 + lungime_substring) + 1);
+    		}
+    		if (strstr(buf,"<")!=NULL && strstr(buf,">")!=NULL)
+		{ const char *inceput = strchr(buf, '<');  // Găsește prima apariție a caracterului '<'
+    		const char *sfarsit = strchr(buf, '>'); 
+    		printf("inceput este %s\nsfrasit este%s",inceput,sfarsit);
+		if (inceput != NULL && sfarsit != NULL) {
+        char numar_str[sfarsit - inceput];
+        strncpy(numar_str, inceput + 1, sfarsit - inceput - 1);
+        numar_str[sfarsit - inceput - 1] = '\0';
+        int rezultat_exemplu;
+        rezultat_exemplu=atoi(numar_str);
+        printf("pana aici e ok %d ", rezultat_exemplu);
+        printf("mesajul este=%s,",extrage_mesaj(rezultat_exemplu));
+        adauga_text(buf,extrage_mesaj(rezultat_exemplu));
+        printf("editat este=%s",buf); }
+                 }	
+    		strcat(msgrasp,buf+4);
+    		printf("\n\n buf este %s ", buf+4);
+        	}
+    		}	
+    		fclose(fisier);
     		strcat(msgrasp,istoric);
-    		strcat(msgrasp,"\nMesajul tau: ");
+    		printf("\n\n\n istoric este %s \n\n\n", istoric);
+    		strcat(msgrasp,"\n-trimite r sa se reincarce pagina");
+    		strcat(msgrasp,"\n-trimite x sa revii la meniu");
+    		strcat(msgrasp,"\nComanda ta/ mesajul tau: ");
+    		comanda=7;
     		}
     		else
-    		if(de_deschis==3)
+    		if(de_deschis>1)
     		{
     		const char *filename="mail.txt";
 		FILE *file=fopen(filename, "r");
@@ -688,50 +786,123 @@ int main ()
 		printf(" %s -> %s : %s \n",eu,de_trimis_catre,msg);
 		}
 		fclose(file);
-		char numar_str[20];
-    		sprintf(numar_str, "%d", *numar_mesaje);
-    		strcat(istoric,numar_str);
-    		strcat(istoric," ");
-		strcat(istoric,eu);
-		strcat(istoric," -> ");
-		strcat(istoric,de_trimis_catre);
-		strcat(istoric," : ");
-		strcat(istoric,msg);
-		strcat(istoric,"\n");
-		char *pozitie = strstr(istoric, de_eliminat);
-            	if (pozitie != NULL) {
-        	size_t offset = pozitie - istoric;
-        	size_t lungime_substring = strlen(de_eliminat);
-        	memmove(pozitie, pozitie + lungime_substring, strlen(pozitie + lungime_substring) + 1);
-    		}
-    		strcat(de_eliminat2," -> "); 
-            	strcat(de_eliminat2,de_trimis_catre); 
-    		char *pozitie2 = strstr(msgrasp, de_eliminat2);
-            	if (pozitie2 != NULL) {
-        	size_t offset = pozitie2 - msgrasp;
-        	size_t lungime_substring = strlen(de_eliminat2);
-        	memmove(pozitie2, pozitie2 + lungime_substring, strlen(pozitie2 + lungime_substring) + 1);
-    		}
-		strcat(msgrasp,istoric);
-		strcat(msgrasp,"\nMesaj trimis.");
+		strcat(msgrasp,"Mesaj trimis.");
 		strcat(msgrasp,"\n-trimite x sa revii la meniu");
-		strcat(msgrasp,"\nMesajul tau: ");		
+		strcat(msgrasp,"\n-trimite r sa se reincarce pagina");
+		strcat(msgrasp,"\nComanda ta/ mesajul tau: ");		
+		comanda=8;
     		}
     		else
     		 {
+    		 comanda=2;
     		 strcat(msgrasp,"Comanda inexistenta!");
-    		 strcat(msgrasp, "\nComanda ta: ");
     		 }
+    		if(comanda<=10)
+    		{
+    		int total;
+		char mesaje[2048];
+		FILE *tempFile;
+		total=0;
+		bzero(mesaje,2048);
+		char tempFileName[] = "temp_mail.txt";
+		tempFile = fopen(tempFileName, "a");
+		if (tempFile == NULL) {
+      		  printf("Nu am putut crea fisierul temporar.\n");
+       		 fclose(tempFile);
+       		 }
+		const char *filename="mail.txt";
+		FILE *file=fopen(filename, "r");
+		char buf[2048];
+		if (file==NULL)
+		{
+		file=fopen(filename,"a");
+		if (file==NULL)
+		{perror("Eroare creare mail.txt");	}
+		}
+		else
+		{
+		char line[1000];
+		char start='1';
+    		while (fgets(line, sizeof(line), file)) {
+   		 if(line[0]==start)
+  		  {
+    			char *inc=" -> ";
+    			char *gasit=strstr(line,inc);
+    			if (gasit != NULL) {
+        		gasit += strlen(inc);
+        		char urmcuv[100];
+        		int i = 0;
+
+        		while (gasit[i] != ' ' && gasit[i] != '\0') {
+            		urmcuv[i] = gasit[i];
+            		i++;
+        		}
+        	urmcuv[i] = '\0';
+        	printf("Cuvantul dupa '->' este: %s\n", urmcuv);
+        	if(strcmp(urmcuv,eu)==0)
+          	{
+          	printf(" %s ",line);
+          	total = total + 1;
+          	char *linie=line+4;
+          	strcat(mesaje,linie);
+          	char *pos = strchr(line, '1');
+          	if (pos != NULL) {
+             	*pos = '2';
+            	}
+            	char *pozitie = strstr(mesaje, de_eliminat);
+            	if (pozitie != NULL) {
+        	size_t offset = pozitie - mesaje;
+        	size_t lungime_substring = strlen(de_eliminat);
+        	memmove(pozitie, pozitie + lungime_substring, strlen(pozitie + lungime_substring) + 1);
+    		}	
+    		if (strstr(mesaje,"<")!=NULL && strstr(mesaje,">")!=NULL)
+		{
+		 const char *inceput = strchr(mesaje, '<');  // Găsește prima apariție a caracterului '<'
+    const char *sfarsit = strchr(mesaje, '>'); 
+    printf("inceput este %s\nsfrasit este%s",inceput,sfarsit);
+		if (inceput != NULL && sfarsit != NULL) {
+        char numar_str[sfarsit - inceput];
+        strncpy(numar_str, inceput + 1, sfarsit - inceput - 1);
+        numar_str[sfarsit - inceput - 1] = '\0';
+        int rezultat_exemplu;
+        rezultat_exemplu=atoi(numar_str);
+        printf("pana aici e ok %d ", rezultat_exemplu);
+        printf("mesajul este=%s,",extrage_mesaj(rezultat_exemplu));
+        adauga_text(mesaje,extrage_mesaj(rezultat_exemplu));
+        printf("editat este=%s",mesaje);
+    }
+                }  		
+          	}
+          	}
+    		}
+    		fprintf(tempFile, "%s", line);  
+    	}
+	}
+		fclose(file);
+		fclose(tempFile);
+		if (rename(tempFileName, filename) != 0) {
+        	printf("Nu am putut înlocui fișierul original.\n");
+    		}
+    		if (comanda<=5)
+    		{
+    		char text[128];
+		printf("%s",mesaje);
+		sprintf(text, "\nAi primit %d mesaje de la ultima reincarcare.\n", total);
+		strcat(msgrasp,text);
+		if (total>0)
+		   strcat(msgrasp,mesaje);
+    		strcat(msgrasp,"\nComanda ta:");
+    		}
+    		}
+    		printf("\n\n de deschis este %d \n\n", de_deschis);
     		break;
     		}	
     		printf("[server]Trimitem mesajul inapoi...%s\n",msgrasp);
     		/* returnam mesajul clientului */
     		if (write (client, msgrasp, 1024) <= 0)
-    		{
-    			perror ("[server]Eroare la write() catre client.\n");
+    		{   perror ("[server]Eroare la write() catre client.\n");
     			continue;		/* continuam sa ascultam */
-    		}
-    		else
+    		} 		else
     			printf ("[server]Mesajul a fost trasmis cu succes.\n");
     		}
     		/* am terminat cu acest client, inchidem conexiunea */
@@ -741,8 +912,7 @@ int main ()
         	size_t lungime_sir_extras = strlen(eu);
         size_t offset = pozitie - clienti_online;
         memmove(pozitie, pozitie + lungime_sir_extras, strlen(pozitie + lungime_sir_extras) + 1);
-    		exit(0);	
-    	}
+    		exit(0);		}
     	}
     }				/* while */
     munmap(clienti_online, MAX_LENGTH);
