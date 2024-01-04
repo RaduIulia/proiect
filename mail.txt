@@ -1,0 +1,6 @@
+2 VUW iulia -> ionut : hai afara 
+2 AIJ ana -> mihai : bunaa 
+2 DIN mihai -> ana : <AIJ> bunaaa 
+2 VUW iulia -> ionut : hai afara 
+2 AIJ ana -> mihai : bunaa 
+0 DIN mihai -> ana : <AIJ> bunaaa

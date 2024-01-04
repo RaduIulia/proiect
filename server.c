@@ -10,23 +10,22 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <time.h>
 /* portul folosit */
 #define PORT 2024
 #define MAX_LENGTH 1024
 /* codul de eroare returnat de anumite apeluri */
 extern int errno;
 
-char* extrage_mesaj(int n) {
+char* extrage_mesaj(char *searchID) {
     char nume_fisier[] = "mail.txt";
     FILE *file = fopen(nume_fisier, "r");
     if (file == NULL) {
         perror("Eroare la deschiderea fișierului");
         return NULL;    }
     char linie[256];  
-    int linie_curenta = 0;
     while (fgets(linie, sizeof(linie), file) != NULL) {
-        linie_curenta++;
-        if (linie_curenta == n) {
+        if (strstr(linie, searchID) != NULL) {
             fclose(file);
             char *pozitie_doua_puncte = strstr(linie, ": ");
             if (pozitie_doua_puncte != NULL) {
@@ -64,6 +63,19 @@ void adauga_text(char *sir_initial, const char *text_adaugat) {
     }
 }
 
+void generareRandomLitere(char *letters) {
+    const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    int index1, index2, index3;
+    srand((unsigned int)time(NULL));
+    index1 = rand() % 26;
+    index2 = (index1 + rand() % 25 + 1) % 26;
+    index3 = (index1 + rand() % 25 + 1) % 26;
+    letters[0] = alphabet[index1];
+    letters[1] = alphabet[index2];
+    letters[2] = alphabet[index3];
+    letters[3] = '\0'; 
+}
+
 int main ()
 {
     struct sockaddr_in server;	// structura folosita de server
@@ -89,31 +101,6 @@ int main ()
         perror("Eroare la alocarea memoriei partajate");
         exit(EXIT_FAILURE);
     }
-    FILE *fisier;
-    char nume_fisier[] = "mail.txt"; 
-    int numar_linii = 0;
-    char caracter;
-    // Deschide fișierul în modul de citire
-    fisier = fopen(nume_fisier, "r");
-
-    // Verifică dacă fișierul s-a deschis cu succes
-    if (fisier == NULL) {
-        printf("Eroare la deschiderea fisierului.\n");
-        return 1;
-    }
-    else
-    while ((caracter = fgetc(fisier)) != EOF) {
-        if (caracter == '\n') {
-            numar_linii++;}
-    }
-    fclose(fisier);
-    int *numar_mesaje = mmap(NULL, MAX_LENGTH, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    if (numar_mesaje == MAP_FAILED) {
-        perror("Eroare la alocarea memoriei partajate");
-        exit(EXIT_FAILURE);
-    } else
-    *numar_mesaje=numar_linii;
-    printf("numar mesaje=%d\n",*numar_mesaje);
     /* crearea unui socket */
     if ((sd = socket (AF_INET, SOCK_STREAM, 0)) == -1)
     {	perror ("[server]Eroare la socket().\n");
@@ -347,32 +334,51 @@ int main ()
           	{
           	printf(" %s ",line);
           	total = total + 1;
-          	char *linie=line+4;
-          	strcat(mesaje,linie);
           	char *pos = strchr(line, '0');
           	if (pos != NULL) {
              	*pos = '2';
             	}
+            	
+    		if (strstr(line,"<")!=NULL && strstr(line,">")!=NULL)
+		{ const char *inceput = strchr(line, '<');  // Găsește prima apariție a caracterului '<'
+    		const char *sfarsit = strchr(line, '>'); 
+    		printf("inceput este %s\nsfrasit este%s",inceput,sfarsit);
+		if (inceput != NULL && sfarsit != NULL) {
+		char IDgasit[3];
+		size_t length = 3; 
+        strncpy(IDgasit, inceput + 1, length);
+        IDgasit[length] = '\0'; // Adăugăm terminatorul de șir
+        printf("\nIDgasit este %s\n",IDgasit);
+        printf("\n %s \n",extrage_mesaj(IDgasit));
+        //strcat(mesaje,extrage_mesaj(IDgasit));
+        char *start1 = strstr(line, "<");
+    if (start1 != NULL) {
+        size_t startIndex = start1 - line;
+        size_t endIndex = startIndex + 5;
+        char *modifiedLine = malloc(strlen(line) + strlen(extrage_mesaj(IDgasit)));
+        if (modifiedLine == NULL) {
+            perror("Eroare la alocarea memoriei");
+            exit(EXIT_FAILURE);
+        }
+        snprintf(modifiedLine, startIndex + 1, "%s", line);
+        strcat(modifiedLine, "\"");
+        strcat(modifiedLine, extrage_mesaj(IDgasit));
+        strcat(modifiedLine, "\"->");
+        strcat(modifiedLine, line + endIndex);
+        strcpy(line, modifiedLine);
+        free(modifiedLine);
+        
+    }
+        
+         }
+                char *linie=line+2;
+                strcat(mesaje,linie);
             	char *pozitie = strstr(mesaje, de_eliminat);
             	if (pozitie != NULL) {
         	size_t offset = pozitie - mesaje;
         	size_t lungime_substring = strlen(de_eliminat);
         	memmove(pozitie, pozitie + lungime_substring, strlen(pozitie + lungime_substring) + 1);
-    		}	
-    		if (strstr(mesaje,"<")!=NULL && strstr(mesaje,">")!=NULL)
-		{ const char *inceput = strchr(mesaje, '<');  // Găsește prima apariție a caracterului '<'
-    		const char *sfarsit = strchr(mesaje, '>'); 
-    		printf("inceput este %s\nsfrasit este%s",inceput,sfarsit);
-		if (inceput != NULL && sfarsit != NULL) {
-        char numar_str[sfarsit - inceput];
-        strncpy(numar_str, inceput + 1, sfarsit - inceput - 1);
-        numar_str[sfarsit - inceput - 1] = '\0';
-        int rezultat_exemplu;
-        rezultat_exemplu=atoi(numar_str);
-        printf("pana aici e ok %d ", rezultat_exemplu);
-        printf("mesajul este=%s,",extrage_mesaj(rezultat_exemplu));
-        adauga_text(mesaje,extrage_mesaj(rezultat_exemplu));
-        printf("editat este=%s",mesaje); }
+    		}     	
                  }	
           	}
           	}
@@ -550,37 +556,18 @@ int main ()
 		perror("Eroare creare mail.txt");
 		}
 		}
-		int reply=0;
-		int lungime_numar=0;
-		if (strstr(msg,"<")!=NULL && strstr(msg,">")!=NULL)
-		{
-		int numar = 0;
-               if (msg[0] == '<')
-               {
-               char *p = &msg[1];  
-               char *sfarsit;
-               numar = strtol(p, &sfarsit, 10);
-               printf("%d",numar);       
-              if (p != sfarsit && *sfarsit == '>') {            
-              printf("Număr găsit: %d\n", numar);
-              reply=numar;
-               }
-               }
-                 }
-		else
-		reply=0;
-		printf("\nreply are valoarea %d \n",reply);
-		(*numar_mesaje)++;
+		char randomID[4]; 
+                generareRandomLitere(randomID);
 		if (strstr(clienti_online,de_trimis_catre)!=NULL)
 		{
 		file=fopen(filename,"a");
-		fprintf(file,"1 %d %d %s -> %s : %s \n",reply,*numar_mesaje,eu,de_trimis_catre,msg);
+		fprintf(file,"1 %s %s -> %s : %s \n",randomID,eu,de_trimis_catre,msg);
 		printf(" %s -> %s : %s \n",eu,de_trimis_catre,msg);
 		}
 		else
 		{
 		file=fopen(filename,"a");
-		fprintf(file,"0 %d %d %s -> %s : %s \n",reply,*numar_mesaje,eu,de_trimis_catre,msg);
+		fprintf(file,"0 %s %s -> %s : %s \n",randomID,eu,de_trimis_catre,msg);
 		printf(" %s -> %s : %s \n",eu,de_trimis_catre,msg);
 		}
 		fclose(file);
@@ -649,16 +636,9 @@ int main ()
     		printf("inceput este %s\nsfrasit este%s",inceput,sfarsit);
 		if (inceput != NULL && sfarsit != NULL) {
         char numar_str[sfarsit - inceput];
-        strncpy(numar_str, inceput + 1, sfarsit - inceput - 1);
-        numar_str[sfarsit - inceput - 1] = '\0';
-        int rezultat_exemplu;
-        rezultat_exemplu=atoi(numar_str);
-        printf("pana aici e ok %d ", rezultat_exemplu);
-        printf("mesajul este=%s,",extrage_mesaj(rezultat_exemplu));
-        adauga_text(buf,extrage_mesaj(rezultat_exemplu));
-        printf("editat este=%s",buf); }
+        printf("\n este=%s",numar_str); }
                  }	
-    		strcat(msgrasp,buf+4);
+    		strcat(msgrasp,buf+2);
         	}
     		}	
 		de_deschis=2;
@@ -694,7 +674,7 @@ int main ()
 		}
 		}
     		int numar_linie = 1;
-    		while(fgets(buf,sizeof(buf),fisier)) {
+    		while(fgets(buf,sizeof(buf),file)) {
         	if (strstr(buf, de_trimis_catre) && strstr(buf, eu) ) {
         	buf[0]='2';
             	char *pozitie = strstr(buf, de_eliminat);
@@ -717,20 +697,13 @@ int main ()
     		printf("inceput este %s\nsfrasit este%s",inceput,sfarsit);
 		if (inceput != NULL && sfarsit != NULL) {
         char numar_str[sfarsit - inceput];
-        strncpy(numar_str, inceput + 1, sfarsit - inceput - 1);
-        numar_str[sfarsit - inceput - 1] = '\0';
-        int rezultat_exemplu;
-        rezultat_exemplu=atoi(numar_str);
-        printf("pana aici e ok %d ", rezultat_exemplu);
-        printf("mesajul este=%s,",extrage_mesaj(rezultat_exemplu));
-        adauga_text(buf,extrage_mesaj(rezultat_exemplu));
-        printf("editat este=%s",buf); }
+        printf("editat este=%s",numar_str); }
                  }	
-    		strcat(msgrasp,buf+4);
-    		printf("\n\n buf este %s ", buf+4);
+    		strcat(msgrasp,buf+2);
+    		printf("\n\n buf este %s ", buf+2);
         	}
     		}	
-    		fclose(fisier);
+    		fclose(file);
     		strcat(msgrasp,istoric);
     		printf("\n\n\n istoric este %s \n\n\n", istoric);
     		strcat(msgrasp,"\n-trimite r sa se reincarce pagina");
@@ -752,37 +725,18 @@ int main ()
 		perror("Eroare creare mail.txt");
 		}
 		}
-		int reply=0;
-		int lungime_numar=0;
-		if (strstr(msg,"<")!=NULL && strstr(msg,">")!=NULL)
-		{
-		int numar = 0;
-               if (msg[0] == '<')
-               {
-               char *p = &msg[1];  
-               char *sfarsit;
-               numar = strtol(p, &sfarsit, 10);
-               printf("%d",numar);
-              if (p != sfarsit && *sfarsit == '>') {      
-              printf("Număr găsit: %d\n", numar);
-              reply=numar;
-               }
-               }
-                 }
-		else
-		reply=0;
-		printf("\nreply are valoarea %d \n",reply);
-		(*numar_mesaje)++;
+		char randomID[4]; 
+                generareRandomLitere(randomID);
 		if (strstr(clienti_online,de_trimis_catre)!=NULL)
 		{
 		file=fopen(filename,"a");
-		fprintf(file,"1 %d %d %s -> %s : %s \n",reply,*numar_mesaje,eu,de_trimis_catre,msg);
+		fprintf(file,"1 %s %s -> %s : %s \n",randomID,eu,de_trimis_catre,msg);
 		printf(" %s -> %s : %s \n",eu,de_trimis_catre,msg);
 		}
 		else
 		{
 		file=fopen(filename,"a");
-		fprintf(file,"0 %d %d %s -> %s : %s \n",reply,*numar_mesaje,eu,de_trimis_catre,msg);
+		fprintf(file,"0 %s %s -> %s : %s \n",randomID,eu,de_trimis_catre,msg);
 		printf(" %s -> %s : %s \n",eu,de_trimis_catre,msg);
 		}
 		fclose(file);
@@ -843,7 +797,7 @@ int main ()
           	{
           	printf(" %s ",line);
           	total = total + 1;
-          	char *linie=line+4;
+          	char *linie=line+2;
           	strcat(mesaje,linie);
           	char *pos = strchr(line, '1');
           	if (pos != NULL) {
@@ -862,14 +816,7 @@ int main ()
     printf("inceput este %s\nsfrasit este%s",inceput,sfarsit);
 		if (inceput != NULL && sfarsit != NULL) {
         char numar_str[sfarsit - inceput];
-        strncpy(numar_str, inceput + 1, sfarsit - inceput - 1);
-        numar_str[sfarsit - inceput - 1] = '\0';
-        int rezultat_exemplu;
-        rezultat_exemplu=atoi(numar_str);
-        printf("pana aici e ok %d ", rezultat_exemplu);
-        printf("mesajul este=%s,",extrage_mesaj(rezultat_exemplu));
-        adauga_text(mesaje,extrage_mesaj(rezultat_exemplu));
-        printf("editat este=%s",mesaje);
+        printf("\n este=%s",numar_str);
     }
                 }  		
           	}
